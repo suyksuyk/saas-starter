@@ -3,7 +3,6 @@ import { db } from '@/lib/db/drizzle';
 import { users, teams, teamMembers } from '@/lib/db/schema';
 import { setSession } from '@/lib/auth/session';
 import { NextRequest, NextResponse } from 'next/server';
-import { stripe } from '@/lib/payments/stripe';
 import Stripe from 'stripe';
 
 export async function GET(request: NextRequest) {
@@ -15,6 +14,8 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    // 动态导入以避免构建时初始化Stripe
+    const { stripe } = await import('@/lib/payments/stripe');
     const session = await stripe.checkout.sessions.retrieve(sessionId, {
       expand: ['customer', 'subscription'],
     });

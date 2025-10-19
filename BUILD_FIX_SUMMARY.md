@@ -113,6 +113,36 @@ const { seedDatabase } = await import('@/lib/db/seed');
 ✓ Collecting build traces
 ```
 
+### 第三轮构建错误修复
+
+在第二次修复后，又发现了新的构建错误：
+
+**问题**: Stripe 认证错误 "Neither apiKey nor config.authenticator provided"
+
+**原因**: 在构建时，`/api/stripe/checkout` 和 `/api/stripe/webhook` 路由被调用，触发了 Stripe 客户端的初始化，但 Stripe 环境变量未配置。
+
+**解决方案**: 
+1. 在 `app/api/stripe/checkout/route.ts` 中使用动态导入来延迟加载 `stripe` 实例
+2. 在 `app/api/stripe/webhook/route.ts` 中使用动态导入来延迟加载 `stripe` 实例
+
+```typescript
+// 修复前：直接导入会在构建时触发Stripe初始化
+import { stripe } from '@/lib/payments/stripe';
+
+// 修复后：动态导入，只在运行时加载
+const { stripe } = await import('@/lib/payments/stripe');
+```
+
+**最终构建结果**:
+```
+✓ Compiled successfully in 5.0s
+✓ Linting and checking validity of types
+✓ Collecting page data
+✓ Generating static pages (19/19)
+✓ Finalizing page optimization
+✓ Collecting build traces
+```
+
 ## 关键学习点
 
 1. **避免构建时数据库操作**: 确保没有任何代码在构建时尝试连接数据库或执行数据库操作
