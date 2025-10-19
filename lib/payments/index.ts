@@ -49,6 +49,11 @@ export function getSupportedProviders() {
  * 获取当前默认支付提供商名称
  */
 export function getCurrentProvider() {
+  // 在构建环境中返回默认值，避免初始化支付提供商
+  if (process.env.NODE_ENV === 'production' && process.env.NEXT_PHASE === 'phase-production-build') {
+    return process.env.DEFAULT_PAYMENT_PROVIDER || 'stripe';
+  }
+  
   const provider = PaymentProviderFactory.getDefaultProvider();
   return provider.getProviderName();
 }

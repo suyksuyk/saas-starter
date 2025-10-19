@@ -113,6 +113,46 @@ const { seedDatabase } = await import('@/lib/db/seed');
 ✓ Collecting build traces
 ```
 
+### 第四轮构建错误修复
+
+在第三次修复后，又发现了新的构建错误：
+
+**问题**: PayPal 认证错误 "Neither apiKey nor config.authenticator provided"
+
+**原因**: `lib/payments/index.ts` 中的 `getCurrentProvider()` 函数在模块导入时被调用，触发了 `PaymentProviderFactory.getDefaultProvider()` 的初始化，进而初始化了支付提供商。
+
+**解决方案**: 
+在 `lib/payments/index.ts` 中为 `getCurrentProvider()` 函数添加构建时保护：
+
+```typescript
+// 修复前：总是初始化支付提供商
+export function getCurrentProvider() {
+  const provider = PaymentProviderFactory.getDefaultProvider();
+  return provider.getProviderName();
+}
+
+// 修复后：在构建时返回默认值
+export function getCurrentProvider() {
+  // 在构建环境中返回默认值，避免初始化支付提供商
+  if (process.env.NODE_ENV === 'production' && process.env.NEXT_PHASE === 'phase-production-build') {
+    return process.env.DEFAULT_PAYMENT_PROVIDER || 'stripe';
+  }
+  
+  const provider = PaymentProviderFactory.getDefaultProvider();
+  return provider.getProviderName();
+}
+```
+
+**最终构建结果**:
+```
+✓ Compiled successfully in 5.0s
+✓ Linting and checking validity of types
+✓ Collecting page data
+✓ Generating static pages (19/19)
+✓ Finalizing page optimization
+✓ Collecting build traces
+```
+
 ### 第三轮构建错误修复
 
 在第二次修复后，又发现了新的构建错误：
