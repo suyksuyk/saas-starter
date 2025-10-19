@@ -11,7 +11,7 @@ import {
 import {
   getTeamByPayPalCustomerId,
   getUser,
-  updateTeamSubscription
+  updateTeamPayPalSubscription
 } from '@/lib/db/queries';
 
 // PayPal SDK types
@@ -124,6 +124,7 @@ export class PayPalProvider implements PaymentProvider {
     }
 
     const accessToken = await this.getAccessToken();
+    const user = await getUser();
     
     // 创建订阅
     const subscriptionData = {
@@ -142,7 +143,7 @@ export class PayPalProvider implements PaymentProvider {
       },
       custom_id: userId.toString(),
       subscriber: {
-        email_address: team.email || ''
+        email_address: user?.email || ''
       }
     };
 
@@ -228,16 +229,16 @@ export class PayPalProvider implements PaymentProvider {
     const plan = await this.getPlanDetails(planId);
     
     if (status === 'ACTIVE') {
-      await updateTeamSubscription(team.id, {
-        paypalSubscriptionId: subscriptionId,
-        paypalProductId: plan.product_id,
+      await updateTeamPayPalSubscription(team.id, {
+        paymentSubscriptionId: subscriptionId,
+        paymentProductId: plan.product_id,
         planName: plan.name,
         subscriptionStatus: status.toLowerCase()
       });
     } else if (status === 'CANCELLED' || status === 'SUSPENDED') {
-      await updateTeamSubscription(team.id, {
-        paypalSubscriptionId: null,
-        paypalProductId: null,
+      await updateTeamPayPalSubscription(team.id, {
+        paymentSubscriptionId: null,
+        paymentProductId: null,
         planName: null,
         subscriptionStatus: status.toLowerCase()
       });

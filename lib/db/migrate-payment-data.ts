@@ -1,6 +1,6 @@
 import { db } from './drizzle';
 import { teams } from './schema';
-import { eq } from 'drizzle-orm';
+import { eq, and, or, isNotNull, ne } from 'drizzle-orm';
 
 /**
  * 数据迁移脚本：将现有的Stripe数据迁移到通用支付字段
@@ -14,8 +14,10 @@ export async function migratePaymentData() {
     const stripeTeams = await db
       .select()
       .from(teams)
-      .where(eq(teams.stripeCustomerId, teams.stripeCustomerId))
-      .where(teams.stripeCustomerId.isNotNull());
+      .where(and(
+        eq(teams.stripeCustomerId, teams.stripeCustomerId),
+        isNotNull(teams.stripeCustomerId)
+      ));
 
     console.log(`找到 ${stripeTeams.length} 个使用Stripe的团队`);
 
@@ -100,14 +102,14 @@ export async function validatePaymentData() {
     const inconsistentTeams = await db
       .select()
       .from(teams)
-      .where(
-        eq(teams.paymentProvider, 'stripe') && 
-        (
-          teams.stripeCustomerId.notEquals(teams.paymentCustomerId) ||
-          teams.stripeSubscriptionId.notEquals(teams.paymentSubscriptionId) ||
-          teams.stripeProductId.notEquals(teams.paymentProductId)
+      .where(and(
+        eq(teams.paymentProvider, 'stripe'),
+        or(
+          ne(teams.stripeCustomerId, teams.paymentCustomerId),
+          ne(teams.stripeSubscriptionId, teams.paymentSubscriptionId),
+          ne(teams.stripeProductId, teams.paymentProductId)
         )
-      );
+      ));
 
     if (inconsistentTeams.length > 0) {
       console.warn(`发现 ${inconsistentTeams.length} 个数据不一致的团队:`);
