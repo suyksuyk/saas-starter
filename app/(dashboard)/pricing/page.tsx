@@ -2,15 +2,40 @@ import { checkoutAction } from '@/lib/payments/actions';
 import { Check } from 'lucide-react';
 import { getPrices, getProducts, getCurrentProvider } from '@/lib/payments';
 import { SubmitButton } from './submit-button';
+import { Product, Price } from '@/lib/payments/providers/payment-provider.interface';
 
 // Prices are fresh for one hour max
 export const revalidate = 3600;
 
+// Fallback data for build time
+const fallbackProducts: Product[] = [
+  { id: 'base-fallback', name: 'Base' },
+  { id: 'plus-fallback', name: 'Plus' }
+];
+
+const fallbackPrices: Price[] = [
+  { id: 'price-base-fallback', productId: 'base-fallback', unitAmount: 800, currency: 'usd', interval: 'month', trialPeriodDays: 7 },
+  { id: 'price-plus-fallback', productId: 'plus-fallback', unitAmount: 1200, currency: 'usd', interval: 'month', trialPeriodDays: 7 }
+];
+
 export default async function PricingPage() {
-  const [prices, products] = await Promise.all([
-    getPrices(),
-    getProducts(),
-  ]);
+  let prices = fallbackPrices;
+  let products = fallbackProducts;
+
+  try {
+    // Only try to fetch real data at runtime, not build time
+    if (process.env.NODE_ENV === 'production' && process.env.NEXT_PHASE !== 'phase-production-build') {
+      const [realPrices, realProducts] = await Promise.all([
+        getPrices(),
+        getProducts(),
+      ]);
+      prices = realPrices;
+      products = realProducts;
+    }
+  } catch (error) {
+    console.warn('Failed to fetch pricing data, using fallback:', error);
+    // Use fallback data if API calls fail
+  }
 
   const basePlan = products.find((product) => product.name === 'Base');
   const plusPlan = products.find((product) => product.name === 'Plus');

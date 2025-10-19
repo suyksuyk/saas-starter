@@ -73,16 +73,5 @@ export async function seedDatabase() {
   await createStripeProducts();
 }
 
-async function seed() {
-  await seedDatabase();
-}
-
-seed()
-  .catch((error: any) => {
-    console.error('Seed process failed:', error);
-    process.exit(1);
-  })
-  .finally(() => {
-    console.log('Seed process finished. Exiting...');
-    process.exit(0);
-  });
+// Seed function should only be called explicitly, not automatically
+// This prevents database operations during build time
