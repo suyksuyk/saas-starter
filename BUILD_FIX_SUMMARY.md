@@ -248,6 +248,79 @@ export async function getProducts() {
 
 构建现在应该可以在任何环境下成功部署，无论是否配置了任何支付提供商或数据库！
 
+### 第七轮构建错误修复（最终解决方案）
+
+在第六轮修复后，用户反馈仍然有 PayPal 认证错误，这次是在 pricing 页面的页面数据收集阶段。
+
+**问题**: `lib/payments/actions.ts` 文件被 pricing 页面导入，这个文件在模块级别就调用了 `PaymentProviderFactory.getDefaultProvider()`，导致构建时初始化支付提供商。
+
+**原因**: 即使有构建时保护，Server Actions 在模块导入时仍然会被处理，导致支付提供商工厂被初始化。
+
+**解决方案**: 
+在 `lib/payments/actions.ts` 中为所有 Server Actions 添加构建时保护和动态导入：
+
+```typescript
+// 修复前：直接导入支付提供商工厂
+import { PaymentProviderFactory } from './providers/payment-provider.factory';
+
+export const checkoutAction = withTeam(async (formData, team) => {
+  const provider = PaymentProviderFactory.getDefaultProvider();
+  // ...
+});
+
+// 修复后：动态导入和构建时保护
+export const checkoutAction = withTeam(async (formData, team) => {
+  // 在构建时返回错误，避免初始化支付提供商
+  if (process.env.NODE_ENV === 'production' && process.env.NEXT_PHASE === 'phase-production-build') {
+    throw new Error('Checkout not available during build');
+  }
+
+  // 动态导入支付提供商工厂
+  const { PaymentProviderFactory } = await import('./providers/payment-provider.factory');
+  const provider = PaymentProviderFactory.getDefaultProvider();
+  // ...
+});
+```
+
+**最终构建结果**:
+```
+✓ Compiled successfully in 6.0s
+✓ Linting and checking validity of types
+✓ Collecting page data
+✓ Generating static pages (19/19)
+✓ Finalizing page optimization
+✓ Collecting build traces
+```
+
+## 最终解决方案总结
+
+经过七轮修复，我们实现了完全的构建时隔离：
+
+1. **数据库操作隔离**: 所有数据库相关代码在构建时都被跳过
+2. **支付提供商隔离**: 所有支付提供商代码在构建时都被跳过
+3. **API 路由隔离**: 所有支付相关 API 路由在构建时都返回适当的状态码
+4. **页面级隔离**: Pricing 页面在构建时使用回退数据
+5. **Server Actions 隔离**: 所有支付相关的 Server Actions 在构建时都被保护
+
+**修复的文件**:
+- `lib/db/migrate-payment-data.ts`: 修复 Drizzle ORM 语法
+- `lib/db/seed.ts`: 移除自动执行代码
+- `app/(dashboard)/pricing/page.tsx`: 添加构建时回退数据，移除不必要的导入
+- `app/api/migrate/route.ts`: 动态导入 seedDatabase
+- `app/api/stripe/checkout/route.ts`: 完全的构建时保护
+- `app/api/stripe/webhook/route.ts`: 完全的构建时保护
+- `lib/payments/index.ts`: 为所有导出函数添加构建时保护
+- `lib/payments/actions.ts`: 为所有 Server Actions 添加构建时保护和动态导入
+
+## 关键学习点
+
+1. **Server Actions 构建时处理**: Server Actions 在模块导入时会被处理，需要特殊的构建时保护
+2. **动态导入的重要性**: 对于任何可能触发第三方库初始化的代码，都需要使用动态导入
+3. **完全隔离策略**: 必须在所有可能的代码路径上添加构建时保护
+4. **构建环境检测**: 使用 `process.env.NEXT_PHASE === 'phase-production-build'` 是最可靠的构建环境检测方法
+
+构建现在应该可以在任何环境下成功部署，无论是否配置了任何支付提供商或数据库！
+
 ### 第四轮构建错误修复
 
 在第三次修复后，又发现了新的构建错误：
