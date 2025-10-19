@@ -83,6 +83,36 @@ if (process.env.NODE_ENV === 'production' && process.env.NEXT_PHASE !== 'phase-p
 ✓ Finalizing page optimization
 ```
 
+### 第二轮构建错误修复
+
+在第一次修复后，又发现了新的构建错误：
+
+**问题**: PayPal 认证错误 "Neither apiKey nor config.authenticator provided"
+
+**原因**: 在构建时，`/api/migrate` 路由被调用，触发了支付提供商的初始化，但 PayPal 环境变量未配置。
+
+**解决方案**: 
+1. 在 `app/api/migrate/route.ts` 中使用动态导入来延迟加载 `seedDatabase` 函数
+2. 避免在模块导入时立即初始化支付提供商
+
+```typescript
+// 修复前：直接导入会在构建时触发支付提供商初始化
+import { seedDatabase } from '@/lib/db/seed';
+
+// 修复后：动态导入，只在运行时加载
+const { seedDatabase } = await import('@/lib/db/seed');
+```
+
+**最终构建结果**:
+```
+✓ Compiled successfully in 5.0s
+✓ Linting and checking validity of types
+✓ Collecting page data
+✓ Generating static pages (19/19)
+✓ Finalizing page optimization
+✓ Collecting build traces
+```
+
 ## 关键学习点
 
 1. **避免构建时数据库操作**: 确保没有任何代码在构建时尝试连接数据库或执行数据库操作

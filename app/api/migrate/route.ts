@@ -3,7 +3,7 @@ import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import { migrate } from 'drizzle-orm/postgres-js/migrator';
 import { runMigrations } from '@/lib/db/migrate-payment-data';
-import { seedDatabase } from '@/lib/db/seed';
+// 延迟导入seed函数以避免构建时的支付提供商初始化
 
 export async function GET() {
   try {
@@ -43,6 +43,8 @@ export async function GET() {
       
       if (isDevelopment || shouldSeed) {
         console.log('Seeding database...');
+        // 动态导入以避免构建时的支付提供商初始化
+        const { seedDatabase } = await import('@/lib/db/seed');
         await seedDatabase();
         console.log('Database seeded successfully');
         seedingStatus = 'completed';
@@ -97,6 +99,8 @@ export async function POST(request: Request) {
           return NextResponse.json({ message: 'Migrations completed successfully' });
           
         case 'seed':
+          // 动态导入以避免构建时的支付提供商初始化
+          const { seedDatabase } = await import('@/lib/db/seed');
           await seedDatabase();
           return NextResponse.json({ message: 'Database seeded successfully' });
           
