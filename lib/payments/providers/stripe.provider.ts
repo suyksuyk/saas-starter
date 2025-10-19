@@ -175,7 +175,7 @@ export class StripeProvider implements PaymentProvider {
     return products.data.map((product) => ({
       id: product.id,
       name: product.name,
-      description: product.description,
+      description: product.description || undefined,
       defaultPriceId:
         typeof product.default_price === 'string'
           ? product.default_price
