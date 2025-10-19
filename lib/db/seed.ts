@@ -39,7 +39,7 @@ async function createStripeProducts() {
   console.log('Stripe products and prices created successfully.');
 }
 
-async function seed() {
+export async function seedDatabase() {
   const email = 'test@test.com';
   const password = 'admin123';
   const passwordHash = await hashPassword(password);
@@ -73,8 +73,12 @@ async function seed() {
   await createStripeProducts();
 }
 
+async function seed() {
+  await seedDatabase();
+}
+
 seed()
-  .catch((error) => {
+  .catch((error: any) => {
     console.error('Seed process failed:', error);
     process.exit(1);
   })

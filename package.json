@@ -8,7 +8,13 @@
     "db:seed": "npx tsx lib/db/seed.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "drizzle-kit studio",
+    "setup:multi-payment": "scripts\\setup-multi-payment.bat",
+    "setup:simple": "scripts\\setup-simple.bat",
+    "check:config": "node scripts/check-config.js",
+    "migrate:payment": "npx tsx lib/db/migrate-payment-data.ts",
+    "migrate:payment:validate": "npx tsx lib/db/migrate-payment-data.ts validate",
+    "migrate:payment:rollback": "npx tsx lib/db/migrate-payment-data.ts rollback"
   },
   "dependencies": {
     "@tailwindcss/postcss": "4.1.7",
@@ -37,6 +43,8 @@
     "tailwindcss": "4.1.7",
     "tw-animate-css": "^1.3.0",
     "typescript": "^5.8.3",
-    "zod": "^3.24.4"
+    "zod": "^3.24.4",
+    "@paypal/checkout-server-sdk": "^1.0.3",
+    "@paypal/react-paypal-js": "^8.1.3"
   }
 }

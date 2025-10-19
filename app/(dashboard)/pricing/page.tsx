@@ -1,6 +1,6 @@
 import { checkoutAction } from '@/lib/payments/actions';
 import { Check } from 'lucide-react';
-import { getStripePrices, getStripeProducts } from '@/lib/payments/stripe';
+import { getPrices, getProducts, getCurrentProvider } from '@/lib/payments';
 import { SubmitButton } from './submit-button';
 
 // Prices are fresh for one hour max
@@ -8,8 +8,8 @@ export const revalidate = 3600;
 
 export default async function PricingPage() {
   const [prices, products] = await Promise.all([
-    getStripePrices(),
-    getStripeProducts(),
+    getPrices(),
+    getProducts(),
   ]);
 
   const basePlan = products.find((product) => product.name === 'Base');

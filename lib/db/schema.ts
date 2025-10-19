@@ -24,9 +24,26 @@ export const teams = pgTable('teams', {
   name: varchar('name', { length: 100 }).notNull(),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  
+  // 支付提供商
+  paymentProvider: varchar('payment_provider', { length: 20 }).notNull().default('stripe'),
+  
+  // 通用支付字段
+  paymentCustomerId: text('payment_customer_id'),
+  paymentSubscriptionId: text('payment_subscription_id'),
+  paymentProductId: text('payment_product_id'),
+  
+  // Stripe特定字段（向后兼容）
   stripeCustomerId: text('stripe_customer_id').unique(),
   stripeSubscriptionId: text('stripe_subscription_id').unique(),
   stripeProductId: text('stripe_product_id'),
+  
+  // PayPal特定字段
+  paypalCustomerId: text('paypal_customer_id'),
+  paypalSubscriptionId: text('paypal_subscription_id'),
+  paypalProductId: text('paypal_product_id'),
+  
+  // 通用订阅信息
   planName: varchar('plan_name', { length: 50 }),
   subscriptionStatus: varchar('subscription_status', { length: 20 }),
 });
