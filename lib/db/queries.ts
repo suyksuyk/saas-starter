@@ -128,3 +128,34 @@ export async function getTeamForUser() {
 
   return result?.team || null;
 }
+
+export async function getTeamByPayPalCustomerId(customerId: string) {
+  const result = await db
+    .select()
+    .from(teams)
+    .where(and(
+      eq(teams.paymentCustomerId, customerId),
+      eq(teams.paymentProvider, 'paypal')
+    ))
+    .limit(1);
+
+  return result.length > 0 ? result[0] : null;
+}
+
+export async function updateTeamPayPalSubscription(
+  teamId: number,
+  subscriptionData: {
+    paymentSubscriptionId: string | null;
+    paymentProductId: string | null;
+    planName: string | null;
+    subscriptionStatus: string;
+  }
+) {
+  await db
+    .update(teams)
+    .set({
+      ...subscriptionData,
+      updatedAt: new Date()
+    })
+    .where(eq(teams.id, teamId));
+}

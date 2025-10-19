@@ -24,6 +24,7 @@ export async function GET() {
     });
     
     const db = drizzle(client);
+    let seedingStatus = 'skipped';
 
     try {
       // 运行Drizzle迁移
@@ -44,6 +45,7 @@ export async function GET() {
         console.log('Seeding database...');
         await seedDatabase();
         console.log('Database seeded successfully');
+        seedingStatus = 'completed';
       }
 
     } finally {
@@ -54,7 +56,7 @@ export async function GET() {
       message: 'Database setup completed successfully',
       details: {
         migrations: 'completed',
-        seeding: isDevelopment || shouldSeed ? 'completed' : 'skipped',
+        seeding: seedingStatus,
         timestamp: new Date().toISOString()
       }
     });
