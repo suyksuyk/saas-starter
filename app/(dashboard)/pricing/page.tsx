@@ -1,6 +1,6 @@
 import { checkoutAction } from '@/lib/payments/actions';
 import { Check } from 'lucide-react';
-import { getPrices, getProducts, getCurrentProvider } from '@/lib/payments';
+import { getPrices, getProducts } from '@/lib/payments';
 import { SubmitButton } from './submit-button';
 import { Product, Price } from '@/lib/payments/providers/payment-provider.interface';
 

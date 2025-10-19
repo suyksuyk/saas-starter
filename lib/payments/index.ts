@@ -10,6 +10,11 @@ import { Product, Price } from './providers/payment-provider.interface';
  * 获取当前默认支付提供商的产品列表
  */
 export async function getProducts() {
+  // 在构建时返回空数组，避免初始化支付提供商
+  if (process.env.NODE_ENV === 'production' && process.env.NEXT_PHASE === 'phase-production-build') {
+    return [];
+  }
+  
   const provider = PaymentProviderFactory.getDefaultProvider();
   return provider.getProducts();
 }
@@ -18,6 +23,11 @@ export async function getProducts() {
  * 获取当前默认支付提供商的价格列表
  */
 export async function getPrices() {
+  // 在构建时返回空数组，避免初始化支付提供商
+  if (process.env.NODE_ENV === 'production' && process.env.NEXT_PHASE === 'phase-production-build') {
+    return [];
+  }
+  
   const provider = PaymentProviderFactory.getDefaultProvider();
   return provider.getPrices();
 }

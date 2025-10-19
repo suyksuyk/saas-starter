@@ -186,6 +186,68 @@ const { handleSubscriptionChange } = await import('@/lib/payments/stripe');
 
 构建现在应该可以在任何环境下成功部署，无论是否配置了支付提供商！
 
+### 第六轮构建错误修复（最终解决方案）
+
+在第五轮修复后，用户反馈仍然有 PayPal 认证错误，这次是在 pricing 页面。
+
+**问题**: Pricing 页面在构建时收集页面数据时触发了支付提供商的初始化，导致 "Neither apiKey nor config.authenticator provided" 错误。
+
+**原因**: 即使有构建时保护，`getProducts()` 和 `getPrices()` 函数仍然被调用，因为它们是 `lib/payments/index.ts` 中的导出函数。
+
+**解决方案**: 
+在 `lib/payments/index.ts` 中的 `getProducts()` 和 `getPrices()` 函数添加构建时保护：
+
+```typescript
+// 修复前：总是初始化支付提供商
+export async function getProducts() {
+  const provider = PaymentProviderFactory.getDefaultProvider();
+  return provider.getProducts();
+}
+
+// 修复后：在构建时返回空数组
+export async function getProducts() {
+  // 在构建时返回空数组，避免初始化支付提供商
+  if (process.env.NODE_ENV === 'production' && process.env.NEXT_PHASE === 'phase-production-build') {
+    return [];
+  }
+  
+  const provider = PaymentProviderFactory.getDefaultProvider();
+  return provider.getProducts();
+}
+```
+
+同时从 pricing 页面移除了 `getCurrentProvider` 的导入，避免不必要的依赖。
+
+**最终构建结果**:
+```
+✓ Compiled successfully in 5.0s
+✓ Linting and checking validity of types
+✓ Collecting page data
+✓ Generating static pages (19/19)
+✓ Finalizing page optimization
+✓ Collecting build traces
+```
+
+## 最终解决方案总结
+
+经过六轮修复，我们实现了完全的构建时隔离：
+
+1. **数据库操作隔离**: 所有数据库相关代码在构建时都被跳过
+2. **支付提供商隔离**: 所有支付提供商代码在构建时都被跳过
+3. **API 路由隔离**: 所有支付相关 API 路由在构建时都返回适当的状态码
+4. **页面级隔离**: Pricing 页面在构建时使用回退数据
+
+**修复的文件**:
+- `lib/db/migrate-payment-data.ts`: 修复 Drizzle ORM 语法
+- `lib/db/seed.ts`: 移除自动执行代码
+- `app/(dashboard)/pricing/page.tsx`: 添加构建时回退数据，移除不必要的导入
+- `app/api/migrate/route.ts`: 动态导入 seedDatabase
+- `app/api/stripe/checkout/route.ts`: 完全的构建时保护
+- `app/api/stripe/webhook/route.ts`: 完全的构建时保护
+- `lib/payments/index.ts`: 为所有导出函数添加构建时保护
+
+构建现在应该可以在任何环境下成功部署，无论是否配置了任何支付提供商或数据库！
+
 ### 第四轮构建错误修复
 
 在第三次修复后，又发现了新的构建错误：
