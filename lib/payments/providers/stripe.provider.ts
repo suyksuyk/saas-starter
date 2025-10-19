@@ -197,7 +197,7 @@ export class StripeProvider implements PaymentProvider {
       unitAmount: price.unit_amount || 0,
       currency: price.currency,
       interval: price.recurring?.interval,
-      trialPeriodDays: price.recurring?.trial_period_days
+      trialPeriodDays: price.recurring?.trial_period_days ?? undefined
     }));
   }
 
