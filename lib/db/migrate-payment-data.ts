@@ -15,8 +15,8 @@ export async function migratePaymentData() {
       .select()
       .from(teams)
       .where(and(
-        eq(teams.stripeCustomerId, teams.stripeCustomerId),
-        isNotNull(teams.stripeCustomerId)
+        isNotNull(teams.stripeCustomerId),
+        ne(teams.stripeCustomerId, '')
       ));
 
     console.log(`找到 ${stripeTeams.length} 个使用Stripe的团队`);
