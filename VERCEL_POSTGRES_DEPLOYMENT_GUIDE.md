@@ -173,11 +173,6 @@ export async function GET() {
 
 ```json
 {
-  "functions": {
-    "api/migrate/route.ts": {
-      "maxDuration": 30
-    }
-  },
   "build": {
     "env": {
       "NEXT_PUBLIC_APP_URL": "https://your-app.vercel.app"
@@ -188,9 +183,47 @@ export async function GET() {
       "path": "/api/migrate",
       "schedule": "0 2 * * *"
     }
+  ],
+  "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, no-cache, must-revalidate, proxy-revalidate"
+        },
+        {
+          "key": "Pragma",
+          "value": "no-cache"
+        },
+        {
+          "key": "Expires",
+          "value": "0"
+        }
+      ]
+    },
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "X-XSS-Protection",
+          "value": "1; mode=block"
+        }
+      ]
+    }
   ]
 }
 ```
+
+**注意**：对于Next.js 13+的App Router，Vercel会自动检测API路由，无需在functions中指定路径。
 
 ## 🚀 第五步：部署应用
 
