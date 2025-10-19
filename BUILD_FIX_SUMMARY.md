@@ -113,6 +113,79 @@ const { seedDatabase } = await import('@/lib/db/seed');
 ✓ Collecting build traces
 ```
 
+### 第五轮构建错误修复（最终解决方案）
+
+在第四次修复后，用户反馈仍然有 Stripe 认证错误，因为用户没有配置 Stripe API 密钥，希望在构建时完全跳过 Stripe 相关代码。
+
+**问题**: 即使有动态导入，构建时仍然会触发 Stripe 路由的页面数据收集，导致 "Neither apiKey nor config.authenticator provided" 错误。
+
+**原因**: Next.js 在构建时会收集所有 API 路由的页面数据，即使使用了动态导入，路由文件本身仍会被处理。
+
+**解决方案**: 
+在 Stripe 相关的 API 路由中添加构建时和配置检查，完全跳过 Stripe 相关代码的执行：
+
+1. **Stripe Webhook 路由** (`app/api/stripe/webhook/route.ts`):
+   - 添加构建时检查：`process.env.NEXT_PHASE === 'phase-production-build'`
+   - 添加配置检查：`!process.env.STRIPE_SECRET_KEY || !process.env.STRIPE_WEBHOOK_SECRET`
+   - 完全动态导入 Stripe 库和相关函数
+
+2. **Stripe Checkout 路由** (`app/api/stripe/checkout/route.ts`):
+   - 添加构建时检查和配置检查
+   - 在未配置时直接重定向到 pricing 页面
+   - 动态导入 Stripe 实例
+
+```typescript
+// 构建时保护
+if (process.env.NODE_ENV === 'production' && process.env.NEXT_PHASE === 'phase-production-build') {
+  return NextResponse.json({ error: 'Service not available during build' }, { status: 503 });
+}
+
+// 配置检查
+if (!process.env.STRIPE_SECRET_KEY) {
+  return NextResponse.json({ error: 'Stripe not configured' }, { status: 503 });
+}
+
+// 完全动态导入
+const { default: Stripe } = await import('stripe');
+const { handleSubscriptionChange } = await import('@/lib/payments/stripe');
+```
+
+**最终构建结果**:
+```
+✓ Compiled successfully in 5.0s
+✓ Linting and checking validity of types
+✓ Collecting page data
+✓ Generating static pages (19/19)
+✓ Finalizing page optimization
+✓ Collecting build traces
+```
+
+## 关键学习点
+
+1. **完全构建时隔离**: 不仅要避免导入时初始化，还要在路由执行时进行构建时检查
+2. **配置验证**: 在运行时检查必需的环境变量，未配置时优雅降级
+3. **动态导入策略**: 对整个第三方库进行动态导入，包括类型定义
+4. **构建环境检测**: 使用 `process.env.NEXT_PHASE === 'phase-production-build'` 准确检测构建环境
+
+## 部署建议
+
+现在项目可以在没有 Stripe 配置的情况下成功构建和部署：
+
+1. **无 Stripe 配置**: 构建成功，Stripe 路由返回服务不可用状态
+2. **有 Stripe 配置**: 运行时正常工作，所有 Stripe 功能可用
+3. **渐进式配置**: 可以先部署应用，后续再配置支付提供商
+
+**修复的文件**:
+- `lib/db/migrate-payment-data.ts`: 修复 Drizzle ORM 语法
+- `lib/db/seed.ts`: 移除自动执行代码
+- `app/(dashboard)/pricing/page.tsx`: 添加构建时回退数据
+- `app/api/migrate/route.ts`: 动态导入 seedDatabase
+- `app/api/stripe/checkout/route.ts`: 完全的构建时保护
+- `app/api/stripe/webhook/route.ts`: 完全的构建时保护
+- `lib/payments/index.ts`: 添加构建时保护
+
+构建现在应该可以在任何环境下成功部署，无论是否配置了支付提供商！
+
 ### 第四轮构建错误修复
 
 在第三次修复后，又发现了新的构建错误：

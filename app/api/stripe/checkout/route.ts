@@ -3,13 +3,23 @@ import { db } from '@/lib/db/drizzle';
 import { users, teams, teamMembers } from '@/lib/db/schema';
 import { setSession } from '@/lib/auth/session';
 import { NextRequest, NextResponse } from 'next/server';
-import Stripe from 'stripe';
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const sessionId = searchParams.get('session_id');
 
   if (!sessionId) {
+    return NextResponse.redirect(new URL('/pricing', request.url));
+  }
+
+  // 在构建时或未配置Stripe时返回错误
+  if (process.env.NODE_ENV === 'production' && process.env.NEXT_PHASE === 'phase-production-build') {
+    return NextResponse.redirect(new URL('/pricing', request.url));
+  }
+
+  // 检查Stripe配置
+  if (!process.env.STRIPE_SECRET_KEY) {
+    console.error('Stripe not configured');
     return NextResponse.redirect(new URL('/pricing', request.url));
   }
 
@@ -44,7 +54,7 @@ export async function GET(request: NextRequest) {
       throw new Error('No plan found for this subscription.');
     }
 
-    const productId = (plan.product as Stripe.Product).id;
+    const productId = (plan.product as any).id;
 
     if (!productId) {
       throw new Error('No product ID found for this subscription.');
@@ -83,7 +93,7 @@ export async function GET(request: NextRequest) {
         stripeCustomerId: customerId,
         stripeSubscriptionId: subscriptionId,
         stripeProductId: productId,
-        planName: (plan.product as Stripe.Product).name,
+        planName: (plan.product as any).name,
         subscriptionStatus: subscription.status,
         updatedAt: new Date(),
       })
